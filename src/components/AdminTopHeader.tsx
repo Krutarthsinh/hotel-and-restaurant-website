@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface AdminTopHeaderProps {
   onToggleSidebar?: () => void;
   onOpenSearch?: () => void;
+  onOpenSupabaseModal?: () => void;
 }
 
-export const AdminTopHeader: React.FC<AdminTopHeaderProps> = ({ onOpenSearch }) => {
+export const AdminTopHeader: React.FC<AdminTopHeaderProps> = ({
+  onOpenSearch,
+  onOpenSupabaseModal,
+}) => {
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
@@ -19,11 +24,39 @@ export const AdminTopHeader: React.FC<AdminTopHeaderProps> = ({ onOpenSearch }) 
         </div>
         <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-outline-variant"></span>
         <span className="hidden sm:inline-block text-[11px] text-on-surface-variant font-normal">
-          Positano Estates • Opera Cloud PMS Linked
+          Positano Estates • Central PMS
         </span>
       </div>
 
       <div className="flex items-center gap-3 relative">
+        {/* Supabase Connection Status Badge */}
+        <button
+          onClick={onOpenSupabaseModal}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-label font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            isSupabaseConfigured
+              ? 'bg-[#3ECF8E]/10 border-[#3ECF8E]/40 text-[#228355] hover:bg-[#3ECF8E]/20'
+              : 'bg-amber-500/10 border-amber-500/40 text-amber-700 hover:bg-amber-500/20'
+          }`}
+          title="Supabase Database Status & Schema Hub"
+          id="supabase-status-pill"
+        >
+          <span className="relative flex h-2 w-2">
+            <span
+              className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                isSupabaseConfigured ? 'bg-[#3ECF8E]' : 'bg-amber-500'
+              }`}
+            ></span>
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                isSupabaseConfigured ? 'bg-[#3ECF8E]' : 'bg-amber-500'
+              }`}
+            ></span>
+          </span>
+          <span className="hidden md:inline">
+            {isSupabaseConfigured ? 'Supabase Live' : 'Supabase Config'}
+          </span>
+        </button>
+
         {/* Search Trigger */}
         <button
           onClick={onOpenSearch}

@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PageView, Suite, Reservation } from './types';
 import { INITIAL_RESERVATIONS, SUITES_DATA } from './data/hotelData';
+import {
+  isSupabaseConfigured,
+  fetchReservationsFromSupabase,
+  saveReservationToSupabase,
+  updateReservationStatusInSupabase,
+  seedReservationsIfEmpty,
+  subscribeToSupabaseReservations,
+} from './lib/supabase';
 import { NavigationHeader } from './components/NavigationHeader';
 import { AdminSidebar } from './components/AdminSidebar';
 import { AdminTopHeader } from './components/AdminTopHeader';
@@ -16,6 +24,7 @@ import { BookingModal } from './components/BookingModal';
 import { SuiteDetailModal } from './components/SuiteDetailModal';
 import { ManualWalkInModal } from './components/ManualWalkInModal';
 import { TableBookingModal } from './components/TableBookingModal';
+import { SupabaseModal } from './components/SupabaseModal';
 import { ToastNotification } from './components/ToastNotification';
 
 export default function App() {
@@ -32,35 +41,76 @@ export default function App() {
   const [inspectedSuite, setInspectedSuite] = useState<Suite | null>(null);
   const [manualWalkInOpen, setManualWalkInOpen] = useState(false);
   const [tableBookingVenue, setTableBookingVenue] = useState<string | null>(null);
+  const [supabaseModalOpen, setSupabaseModalOpen] = useState(false);
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
-  };
+  }, []);
+
+  // Supabase data fetcher
+  const refreshReservationsFromSupabase = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+
+    try {
+      const data = await fetchReservationsFromSupabase();
+      if (data && data.length > 0) {
+        setReservations(data);
+      } else if (data && data.length === 0) {
+        // Automatically seed table if empty
+        const didSeed = await seedReservationsIfEmpty(INITIAL_RESERVATIONS);
+        if (didSeed) {
+          const seededData = await fetchReservationsFromSupabase();
+          if (seededData && seededData.length > 0) {
+            setReservations(seededData);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not sync reservations from Supabase:', err);
+    }
+  }, []);
+
+  // Load from Supabase on mount and listen to realtime updates
+  useEffect(() => {
+    refreshReservationsFromSupabase();
+
+    const unsubscribe = subscribeToSupabaseReservations(() => {
+      refreshReservationsFromSupabase();
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [refreshReservationsFromSupabase]);
 
   // Reservation handlers
-  const handleCheckInReservation = (resId: string) => {
+  const handleCheckInReservation = async (resId: string) => {
     setReservations((prev) =>
       prev.map((r) => (r.id === resId ? { ...r, status: 'Checked-In' as const } : r))
     );
+    await updateReservationStatusInSupabase(resId, 'Checked-In');
   };
 
-  const handleCheckOutReservation = (resId: string) => {
+  const handleCheckOutReservation = async (resId: string) => {
     setReservations((prev) =>
       prev.map((r) => (r.id === resId ? { ...r, status: 'Departed' as const } : r))
     );
+    await updateReservationStatusInSupabase(resId, 'Departed');
   };
 
-  const handleConfirmBooking = (newRes: Reservation) => {
+  const handleConfirmBooking = async (newRes: Reservation) => {
     setReservations((prev) => [newRes, ...prev]);
     showToast(`Reservation #${newRes.ref} confirmed for ${newRes.guestName}`);
+    await saveReservationToSupabase(newRes);
   };
 
-  const handleRegisterWalkIn = (newRes: Reservation) => {
+  const handleRegisterWalkIn = async (newRes: Reservation) => {
     setReservations((prev) => [newRes, ...prev]);
     showToast(`Walk-in checked in: ${newRes.guestName} to ${newRes.suiteNumber}`);
+    await saveReservationToSupabase(newRes);
   };
 
   const openBookingForSuite = (suiteId?: string) => {
@@ -80,7 +130,11 @@ export default function App() {
         <div className="flex min-h-screen">
           {/* Admin Sidebar */}
           <div className="hidden lg:block">
-            <AdminSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+            <AdminSidebar
+              currentPage={currentPage}
+              onNavigate={setCurrentPage}
+              onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
+            />
           </div>
 
           {/* Admin Top Header */}
@@ -89,6 +143,7 @@ export default function App() {
               setCurrentPage('admin-reservations');
               showToast('Type in the search field to filter guest records.');
             }}
+            onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
           />
 
           {/* Admin Main Body */}
@@ -99,6 +154,13 @@ export default function App() {
                 Hotelier Desk
               </span>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSupabaseModalOpen(true)}
+                  className="px-2.5 py-1 text-xs font-label uppercase text-[#228355] bg-[#3ECF8E]/15 border border-[#3ECF8E]/40 rounded font-semibold"
+                  title="Supabase Settings"
+                >
+                  DB
+                </button>
                 <button
                   onClick={() => setCurrentPage('admin-reservations')}
                   className={`px-3 py-1 text-xs font-label uppercase ${
@@ -315,6 +377,15 @@ export default function App() {
           restaurantName={tableBookingVenue}
           onClose={() => setTableBookingVenue(null)}
           onConfirm={showToast}
+        />
+      )}
+
+      {/* Supabase Integration & Schema Hub */}
+      {supabaseModalOpen && (
+        <SupabaseModal
+          onClose={() => setSupabaseModalOpen(false)}
+          onRefreshData={refreshReservationsFromSupabase}
+          onShowToast={showToast}
         />
       )}
 

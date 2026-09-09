@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { saveDiningReservationToSupabase } from '../lib/supabase';
 
 interface TableBookingModalProps {
   restaurantName: string;
@@ -17,10 +18,24 @@ export const TableBookingModal: React.FC<TableBookingModalProps> = ({
   const [seatingArea, setSeatingArea] = useState('Terrace Cliffside Railing');
   const [guestName, setGuestName] = useState('');
   const [dietary, setDietary] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName.trim()) return;
+
+    setIsSubmitting(true);
+    await saveDiningReservationToSupabase({
+      restaurantName,
+      guestName: guestName.trim(),
+      date,
+      time,
+      guests,
+      seatingArea,
+      dietary: dietary.trim() || undefined,
+    });
+    setIsSubmitting(false);
+
     onConfirm(`Table reserved for ${guestName} at ${restaurantName} on ${date} at ${time} (${seatingArea}).`);
     onClose();
   };

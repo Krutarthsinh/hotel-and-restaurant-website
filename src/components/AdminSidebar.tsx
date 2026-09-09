@@ -5,9 +5,14 @@ import { HOTEL_LOGO_URL } from '../data/hotelData';
 interface AdminSidebarProps {
   currentPage: PageView;
   onNavigate: (page: PageView) => void;
+  onOpenSupabaseModal?: () => void;
 }
 
-export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage, onNavigate }) => {
+export const AdminSidebar: React.FC<AdminSidebarProps> = ({
+  currentPage,
+  onNavigate,
+  onOpenSupabaseModal,
+}) => {
   const adminLinks = [
     {
       label: 'Folio & Bookings',
@@ -85,6 +90,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage, onNavig
               </button>
             );
           })}
+
+          {onOpenSupabaseModal && (
+            <button
+              onClick={onOpenSupabaseModal}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded text-xs font-label uppercase tracking-wider transition-colors text-left text-on-surface-variant hover:bg-[#3ECF8E]/10 hover:text-[#228355] cursor-pointer mt-3 border border-dashed border-[#3ECF8E]/40"
+              id="admin-link-supabase"
+            >
+              <svg className="w-4 h-4 fill-[#3ECF8E] shrink-0" viewBox="0 0 24 24">
+                <path d="M21.362 9.354H12V.396a.396.396 0 0 0-.716-.233L.108 13.916a.396.396 0 0 0 .316.643H12v8.958a.396.396 0 0 0 .716.233l11.176-13.753a.396.396 0 0 0-.53-.643z"/>
+              </svg>
+              <span className="font-semibold">Supabase Cloud</span>
+            </button>
+          )}
         </nav>
       </div>
 

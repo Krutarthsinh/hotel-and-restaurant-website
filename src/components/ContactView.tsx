@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MAP_IMAGE_URL } from '../data/hotelData';
+import { saveContactInquiryToSupabase } from '../lib/supabase';
 
 interface ContactViewProps {
   onShowToast: (msg: string) => void;
@@ -10,9 +11,20 @@ export const ContactView: React.FC<ContactViewProps> = ({ onShowToast }) => {
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('Private Reservation');
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
+    await saveContactInquiryToSupabase({
+      name: name.trim(),
+      email: email.trim(),
+      subject,
+      message: message.trim(),
+    });
+
+    setIsSubmitting(false);
     onShowToast(`Thank you, ${name}. Your message has reached the Executive Concierge.`);
     setName('');
     setEmail('');
