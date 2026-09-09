@@ -1,0 +1,6 @@
+{
+  "name": "The Grand Aurelia",
+  "description": "Ultra-luxury cliffside hotel & resort in Positano, Amalfi Coast, with bespoke suites, fine dining, curated experiences, and real-time hotelier operations desk.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
